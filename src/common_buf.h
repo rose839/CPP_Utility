@@ -61,4 +61,22 @@ typedef struct {
 	char *extra_buffer;				// extra data buffer
 } ReceiveQueueType;
 
+/*
+***************************** Class Declaration *****************************
+*/
+class CommBufferClass {
+	/*
+	---------------------------- Public Interface ----------------------------
+	*/
+	public:
+		CommBufferClass(int num_send_queue, int num_recieve_queue, int max_packet_len, int max_extra_len);
+		virtual ~CommBufferClass();
+		void init(void);
+		void init_send_queue(void);
+
+	/*
+	......................... Send Queue routines .........................
+	*/
+	
+};
 
