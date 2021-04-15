@@ -4,7 +4,7 @@
 #include <fstream>
 #include <exception>
 #include <gmock/gmock.h>
-#include "../src/istream_line_reader.h"
+#include "../istream_line_reader.h"
 
 TEST(IstreamLineReader, CheckWhenNoIstream) {
 

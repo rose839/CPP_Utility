@@ -10,13 +10,4 @@ else()
 	message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 endif()
 
-include_directories(../test/)
-
-set(sources 
-   test/main.cpp
-   test/istream_line_reader.cpp)
-   
-add_executable(test ${sources})
-target_link_libraries(test pthread)
-target_link_libraries(test gmock)
-target_link_libraries(test gtest)
+add_subdirectory(src/istream_line_reader)
