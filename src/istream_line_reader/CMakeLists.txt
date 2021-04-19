@@ -1,6 +1,6 @@
 include_directories(./)
 
-SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/test) 
+SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin/test) 
 
 set(sources
    test/main.cpp
