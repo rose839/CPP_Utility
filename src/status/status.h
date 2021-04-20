@@ -16,6 +16,8 @@
 #include <memory>
 #include <string>
 #include <cstdint>
+#include <cstdarg>
+#include <cstring>
 
 class Status final {
 public:
@@ -111,6 +113,10 @@ public:
         return reinterpret_cast<const Header*>(m_state.get())->m_code;
     }
 
+    std::string message() const;
+
+    std::string toString() const;
+
 private:
     uint16_t size() const {
         return reinterpret_cast<const Header*>(m_state.get())->m_size;
@@ -138,5 +144,9 @@ private:
     //        state[4-...]: verbose error message
     std::unique_ptr<const char[]> m_state;
 };
+
+inline std::ostream& operator<<(std::ostream &os, const Status &status) {
+    return os << status.toString();
+}
 
 #endif

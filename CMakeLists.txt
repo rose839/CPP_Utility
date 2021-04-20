@@ -10,4 +10,8 @@ else()
 	message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 endif()
 
+enable_testing()
+
+include_directories(src)
 add_subdirectory(src/istream_line_reader)
+add_subdirectory(src/status)
