@@ -12,6 +12,5 @@ Run those following command in soure code dir for testing.
 mkdir build
 cd build
 cmake ..
-make
-./test
+make test
 ```
