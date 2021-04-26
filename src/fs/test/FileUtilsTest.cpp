@@ -31,6 +31,17 @@ TEST(FileUtils, basename) {
     }
 }
 
+TEST(FileUtils, fileType) {
+    {
+        auto fileType = FileUtils::fileType("/tmp");
+        ASSERT_TRUE((fileType == FileType::DIRECTORY));
+    }
+    {
+        auto fileType = FileUtils::fileType("/dev/tty");
+        ASSERT_TRUE((fileType == FileType::CHAR_DEV || fileType == FileType::NOTEXIST));
+    }
+}
+
 int main(int argc, char **argv) {
 	testing::InitGoogleMock(&argc, argv);
 	return RUN_ALL_TESTS();
