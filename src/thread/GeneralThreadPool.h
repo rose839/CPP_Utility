@@ -8,7 +8,7 @@
 #include "helpers.h"
 
 /**
- * Based on GenericWorker, GenericThreadPool implements a thread pool that execute tasks asynchronously.
+ * Based on GeneralWorker, GenericThreadPool implements a thread pool that execute tasks asynchronously.
  *
  * Under the hood, GenericThreadPool distributes tasks around the internal threads in a round-robin way.
  *
@@ -46,7 +46,7 @@ public:
     /**
      * Synchronously to wait the workers to finish and exit.
      *
-     * For the sake of convenience, `~GenericWorker' invokes `stop' and `wait',
+     * For the sake of convenience, `~GeneralWorker' invokes `stop' and `wait',
      * but it's better to control these processes manually to make the resource
      * management more clearly.
      */
@@ -67,12 +67,12 @@ public:
      * @param return  an instance of `folly::SemiFuture' you could wait upon
      *          for the result of `task'
      */
-    template <typename F, typename ...Args>
+    template <typename F, typename...Args>
     auto addTask(F&&, Args&&...)
         -> typename std::enable_if<
             !std::is_void<ReturnType<F, Args...>>::value,
-            ReturnType<F, Args...>
-        >::type;
+            FutureType<F, Args...>
+           >::type;
     template <typename F, typename ...Args>
     auto addTask(F&&, Args&&...)
         -> typename std::enable_if<
@@ -122,5 +122,61 @@ private:
     std::atomic<size_t> m_nextThread{0};
     std::vector<std::unique_ptr<GeneralWorker>> m_pool;
 };
+
+template <typename F, typename ...Args>
+auto GeneralThreadPool::addTask(F &&f, Args &&...args)
+        -> typename std::enable_if<
+            !std::is_void<ReturnType<F, Args...>>::value,
+            FutureType<F, Args...>
+        >::type {
+    auto idx = m_nextThread++ % m_nrThreads;
+    return m_pool[idx].addTask(std::forward<F>(f), std::forward<Args>(args)...);
+}
+
+template <typename F, typename...Args>
+auto GeneralThreadPool::addTask(F &&f, Args &&...args)
+        -> typename std::enable_if<
+            std::is_void<ReturnType<F, Args...>>::value,
+            UnitFutureType
+           >::type {
+    auto idx = m_nextThread++ % m_nrThreads;
+    return m_pool[idx]->addTask(std::forward<F>(f),
+                               std::forward<Args>(args)...);
+}
+
+template <typename F, typename...Args>
+auto GeneralThreadPool::addDelayTask(size_t ms, F &&f, Args &&...args)
+        -> typename std::enable_if<
+            !std::is_void<ReturnType<F, Args...>>::value,
+            FutureType<F, Args...>
+           >::type {
+    auto idx = m_nextThread++ % m_nrThreads;
+    return m_pool[idx]->addDelayTask(ms,
+                                    std::forward<F>(f),
+                                    std::forward<Args>(args)...);
+}
+
+
+template <typename F, typename...Args>
+auto GeneralThreadPool::addDelayTask(size_t ms, F &&f, Args &&...args)
+        -> typename std::enable_if<
+            std::is_void<ReturnType<F, Args...>>::value,
+            UnitFutureType
+           >::type {
+    auto idx = m_nextThread++ % m_nrThreads;
+    return m_pool[idx]->addDelayTask(ms,
+                                    std::forward<F>(f),
+                                    std::forward<Args>(args)...);
+}
+
+
+template <typename F, typename...Args>
+uint64_t GeneralThreadPool::addRepeatTask(size_t ms, F &&f, Args &&...args) {
+    auto idx = m_nextThread++ % m_nrThreads;
+    auto id = m_pool[idx]->addRepeatTask(ms,
+                                        std::forward<F>(f),
+                                        std::forward<Args>(args)...);
+    return ((idx << GeneralWorker::TIMER_ID_BITS) | id);
+}
 
 #endif
