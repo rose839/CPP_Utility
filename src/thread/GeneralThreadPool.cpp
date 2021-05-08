@@ -39,3 +39,9 @@ bool GeneralThreadPool::wait() {
     m_pool.clear();
     return ok;
 }
+
+void GeneralThreadPool::purgeTimerTask(uint64_t id) {
+    auto idx = (id >> GenericWorker::TIMER_ID_BITS);
+    id = (id & GenericWorker::TIMER_ID_MASK);
+    m_pool[idx]->purgeTimerTask(id);
+}
