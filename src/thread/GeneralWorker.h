@@ -157,4 +157,57 @@ private:
     std::unique_ptr<NamedThread>                m_thread;
 };
 
+template <typename F, typename ...Args>
+auto GeneralWorker::addTask(F &&task, Args &&...args)
+    -> typename std::enable_if<
+        !std::is_void<ReturnType<F, Args...>>::value,
+        FutureType<F, Args...>
+    >::type {
+    auto promise = std::make_shared<folly::Promise<ReturnType<F, Args...>>>();
+    auto task = std::make_shared<std::function<ReturnType<F, Args...>()>>(
+        std::bind(std::forward<F>(f), std::forward<Args>(args)...)
+    );
+    auto future = promise->getSemiFuture();
+    {
+        std::lock_guard<mutex> guard{m_lock};
+        m_pendingTasks.emplace_back(
+            [=] {
+                promise->setWith(*task);
+            }
+        );
+    }
+    notify();
+    return future;
+}
+
+template <typename F, typename ...Args>
+auto GeneralWorker::addTask(F &&f, Args &&...args) 
+    -> typename std::enable_if<
+        std::is_void<ReturnType<F, Args...>>::value,
+        UnitFutureType
+    >::type {
+    auto promise = std::make_shared<folly::Promise<folly::Unit>>();
+    auto task = std::make_shared<std::function<ReturnType<F, Args...>()>>(
+        std::bind(std::forward<F>(f), std::forward<Args>(args)...)
+    );
+    auto future = promise->getSemiFuture();
+    {
+        std::lock_guard<std::mutex> guard{m_lock};
+        m_pendingTasks.emplace_back(
+            [=] {
+                try {
+                    (*task)();
+                    promise->setValue(folly::unit);
+                } catch (const std::exception& ex) {
+                    promise->setException(ex);
+                }
+            }
+        );
+    }
+    notify();
+    return future;
+}
+
+
+
 #endif
