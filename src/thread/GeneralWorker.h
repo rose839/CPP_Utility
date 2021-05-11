@@ -111,7 +111,7 @@ public:
      * @return        ID of the added task, unique for this worker
      */
     template <typename F, typename...Args>
-    uint64_t addRepeatTask(size_t ms, F &&task, Args &&...args);
+    auto addRepeatTask(size_t ms, F &&task, Args &&...args);
 
     /**
      * To purge or deactivate a repeated task.
@@ -119,6 +119,8 @@ public:
      */
     void purgeTimerTask(uint64_t id);
 
+    template <typename F, typename ...Args>
+    uint64_t addTimerTask(size_t, size_t, F&&, Args&&...);
 private:
     struct Timer {
         explicit Timer(std::function<void(void)> cb);
@@ -208,6 +210,71 @@ auto GeneralWorker::addTask(F &&f, Args &&...args)
     return future;
 }
 
+template <typename F, typename ...Args>
+auto GeneralWorker::addDelayTask(size_t ms, F &&f, Args &&...args) 
+        -> typename std::enable_if<
+            std::is_void<ReturnType<F, Args...>>::value,
+            UnitFutureType
+        >::type {
+    auto promise = std::make_shared<folly::Promise<folly::Unit>>();
+    auto task = std::make_shared<std::function<ReturnType<F, Args...> ()>>(
+        std::bind(std::forward<F>(f), std::forward<Args>(args)...);
+    );
+    auto future = promise->getSemiFuture();
+    addTimerTask(ms, 0, [=] {
+        try {
+            (*task)();
+            promise->setValue(folly::unit);
+        } catch (const std::exception& ex) {
+            promise->setException(ex);
+        }
+    });
+    return future;
+}
 
+template <typename F, typename...Args>
+auto GeneralWorker::addDelayTask(size_t ms, F &&f, Args &&...args)
+        -> typename std::enable_if<
+            !std::is_void<ReturnType<F, Args...>>::value,
+            FutureType<F, Args...>
+           >::type {
+    auto promise = std::make_shared<folly::Promise<ReturnType<F, Args...>>>();
+    auto task = std::make_shared<std::function<ReturnType<F, Args...> ()>>(
+        std::bind(std::forward<F>(f), std::forward<Args>(args)...));
+    auto future = promise->getSemiFuture();
+    addTimerTask(ms, 0, [=] {
+        promise->setWith(*task);
+    });
+    return future;
+}
+
+template <typename F, typename...Args>
+auto GeneralWorker::addRepeatTask(size_t ms, F &&f, Args &&...args) {
+    return addTimerTask(ms,
+                        ms,
+                        std::forward<F>(f),
+                        std::forward<Args>(args)...);
+}
+
+template <typename F, typename ...Args>
+uint64_t GeneralWorker::addTimerTask(size_t delay,
+                                    size_t interval,
+                                    F &&f,
+                                    Args &&...args) {
+    auto timer = std::make_unique<Timer>(
+        std::bind(std::forward<F>(f), std::forward<Args>(args)...)
+    );
+    timer->m_delayMSec = delay;
+    timer->m_intervalMSec = interval;
+    timer->m_owner = this;
+    auto id = 0UL;
+    {
+        std::lock_guard<std::mutex> guard(lock_);
+        timer->id_ = (id = nextTimerId());
+        pendingTimers_.emplace_back(std::move(timer));
+    }
+    notify();
+    return id;
+}
 
 #endif
