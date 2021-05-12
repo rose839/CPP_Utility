@@ -133,12 +133,14 @@ private:
         GeneralWorker *m_owner{nullptr};
     };
     using TimerPtr = std::unique_ptr<Timer>;
+    void purgeTimerInternal(uint64_t id);
 
 private:
     void loop();
     void notify();
     void onNotify();
     uint64_t nextTimerId() {
+        return (m_nextTimerId++ & TIMER_ID_MASK);
         return 0;
     }
 
