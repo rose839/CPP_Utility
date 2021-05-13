@@ -6,6 +6,7 @@
 #include <atomic>
 #include <memory>
 #include "helpers.h"
+#include "GeneralWorker.h"
 
 /**
  * Based on GeneralWorker, GenericThreadPool implements a thread pool that execute tasks asynchronously.

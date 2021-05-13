@@ -4,6 +4,8 @@
 #include <functional>
 #include <mutex>
 #include <unordered_map>
+#include <folly/futures/Future.h>
+#include <folly/Unit.h>
 #include "../base/Base.h"
 #include "GeneralThreadPool.h"
 #include "NamedThread.h"

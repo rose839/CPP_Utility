@@ -1,4 +1,5 @@
 #include "GeneralThreadPool.h"
+#include "GeneralWorker.h"
 
 bool GeneralThreadPool::start(size_t nrThreads, const std::string &name = "") {
     // this pool is in use
@@ -41,7 +42,7 @@ bool GeneralThreadPool::wait() {
 }
 
 void GeneralThreadPool::purgeTimerTask(uint64_t id) {
-    auto idx = (id >> GenericWorker::TIMER_ID_BITS);
-    id = (id & GenericWorker::TIMER_ID_MASK);
+    auto idx = (id >> GeneralWorker::TIMER_ID_BITS);
+    id = (id & GeneralWorker::TIMER_ID_MASK);
     m_pool[idx]->purgeTimerTask(id);
 }
