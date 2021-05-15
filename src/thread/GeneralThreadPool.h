@@ -5,6 +5,8 @@
 #include <vector>
 #include <atomic>
 #include <memory>
+#include <folly/futures/Future.h>
+#include <folly/Unit.h>
 #include "helpers.h"
 #include "GeneralWorker.h"
 
@@ -131,7 +133,7 @@ auto GeneralThreadPool::addTask(F &&f, Args &&...args)
             FutureType<F, Args...>
         >::type {
     auto idx = m_nextThread++ % m_nrThreads;
-    return m_pool[idx].addTask(std::forward<F>(f), std::forward<Args>(args)...);
+    return m_pool[idx]->addTask(std::forward<F>(f), std::forward<Args>(args)...);
 }
 
 template <typename F, typename...Args>

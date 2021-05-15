@@ -1,4 +1,5 @@
 #include <gmock/gmock.h>
+#include <unistd.h>
 #include "../GeneralThreadPool.h"
 
 TEST(GeneralThreadPool, StartAndStop) {
@@ -102,7 +103,39 @@ TEST(GeneralThreadPool, addDelayTask) {
 	};
 	time::Duration clock;
 	ASSERT_EQ(1, pool.addDelayTask(50, cb).get());
-	ASSERT_GE();
+	ASSERT_GE(shared.use_count(), 2);
+	ASSERT_TRUE(msAboutEqual(50, clock.elapsedInUSec() / 1000));
+	::usleep(5 * 1000);
+	ASSERT_EQ(2, shared.use_count()); 
+}
+
+TEST(GeneralThreadPool, addRepeatTask) {
+	GeneralThreadPool pool;
+	ASSERT_TRUE(pool.start(1));
+
+	auto counter = 0UL;
+	auto cb = [&] () {
+		counter++;
+	};
+	pool.addRepeatTask(50, cb);
+	::usleep(160 * 1000);
+	ASSERT_EQ(3, counter);
+}
+
+TEST(GeneralThreadPool, purgeRepeatTask) {
+	GeneralThreadPool pool;
+	ASSERT_TRUE(pool.start(4));
+	for (auto i = 0; i < 8; i++) {
+		auto counter = 0UL;
+		auto cb = [&] () {
+			counter++;
+		};
+		auto id = pool.addRepeatTask(50, cb);
+		::usleep(110 * 1000);
+		pool.purgeTimerTask(id);
+		::usleep(50 * 1000);
+		ASSERT_EQ(2, counter) << "i: " << i << ", id:" << id;
+	}
 }
 
 int main(int argc, char **argv) {

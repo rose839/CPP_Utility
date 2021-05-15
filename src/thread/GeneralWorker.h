@@ -7,7 +7,6 @@
 #include <folly/futures/Future.h>
 #include <folly/Unit.h>
 #include "../base/Base.h"
-#include "GeneralThreadPool.h"
 #include "NamedThread.h"
 #include "helpers.h"
 
@@ -164,7 +163,7 @@ private:
 };
 
 template <typename F, typename ...Args>
-auto GeneralWorker::addTask(F &&task, Args &&...args)
+auto GeneralWorker::addTask(F &&f, Args &&...args)
     -> typename std::enable_if<
         !std::is_void<ReturnType<F, Args...>>::value,
         FutureType<F, Args...>
@@ -175,7 +174,7 @@ auto GeneralWorker::addTask(F &&task, Args &&...args)
     );
     auto future = promise->getSemiFuture();
     {
-        std::lock_guard<mutex> guard{m_lock};
+        std::lock_guard<std::mutex> guard{m_lock};
         m_pendingTasks.emplace_back(
             [=] {
                 promise->setWith(*task);
@@ -222,7 +221,7 @@ auto GeneralWorker::addDelayTask(size_t ms, F &&f, Args &&...args)
         >::type {
     auto promise = std::make_shared<folly::Promise<folly::Unit>>();
     auto task = std::make_shared<std::function<ReturnType<F, Args...> ()>>(
-        std::bind(std::forward<F>(f), std::forward<Args>(args)...);
+        std::bind(std::forward<F>(f), std::forward<Args>(args)...)
     );
     auto future = promise->getSemiFuture();
     addTimerTask(ms, 0, [=] {
@@ -273,9 +272,9 @@ uint64_t GeneralWorker::addTimerTask(size_t delay,
     timer->m_owner = this;
     auto id = 0UL;
     {
-        std::lock_guard<std::mutex> guard(lock_);
-        timer->id_ = (id = nextTimerId());
-        pendingTimers_.emplace_back(std::move(timer));
+        std::lock_guard<std::mutex> guard(m_lock);
+        timer->m_id = (id = nextTimerId());
+        m_pendingTimers.emplace_back(std::move(timer));
     }
     notify();
     return id;

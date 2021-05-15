@@ -1,7 +1,7 @@
 #include "GeneralThreadPool.h"
 #include "GeneralWorker.h"
 
-bool GeneralThreadPool::start(size_t nrThreads, const std::string &name = "") {
+bool GeneralThreadPool::start(size_t nrThreads, const std::string &name) {
     // this pool is in use
     if (m_nrThreads != 0) {
         return false;
@@ -16,7 +16,7 @@ bool GeneralThreadPool::start(size_t nrThreads, const std::string &name = "") {
     auto ok = true;
     for (auto i = 0UL; ok && i < m_nrThreads; i++) {
         m_pool.emplace_back(std::make_unique<GeneralWorker>());
-        ok = m_pool.back().start();
+        ok = m_pool.back()->start(name);
     }
 
     return ok;
@@ -24,8 +24,8 @@ bool GeneralThreadPool::start(size_t nrThreads, const std::string &name = "") {
 
 bool GeneralThreadPool::stop() {
     auto ok = true;
-    for (auto worker : m_pool) {
-        ok = ok && worker.stop();
+    for (auto &worker : m_pool) {
+        ok = ok && worker->stop();
     }
 
     return ok;
