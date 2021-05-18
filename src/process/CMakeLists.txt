@@ -8,9 +8,11 @@ set(sources
     ../status/status.cpp
     test/ProcessUtilsTest.cpp)
 
+link_directories(${cpp_utils_test_SOURCE_DIR}/thirdpart/gmock/lib)
+
 add_executable(ProcessUtilsTest ${sources})
 target_link_libraries(ProcessUtilsTest pthread)
-target_link_libraries(GeneralThreadPool_test ../../thirpart/gmock/lib/libgmock.a)
-target_link_libraries(GeneralThreadPool_test ../../thirpart/gmock/lib/libtest.a)
+target_link_libraries(ProcessUtilsTest libgmock.a)
+target_link_libraries(ProcessUtilsTest libgtest.a)
 
 add_test(ProcessUtilsTest ${PROJECT_BINARY_DIR}/bin/test/ProcessUtilsTest)
