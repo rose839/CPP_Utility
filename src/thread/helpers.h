@@ -3,7 +3,7 @@
 
 class NonCopable {
 protected:
-    NonCopable();
+    NonCopable() {};
     NonCopable(const NonCopable&) = delete;
     NonCopable& operator=(const NonCopable&) = delete;
 };

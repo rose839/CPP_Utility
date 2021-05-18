@@ -57,7 +57,7 @@ public:
     bool wait();
 
     template <typename F, typename ...Args>
-    using ReturnType = typename std::result_of<F(Args...)>::tupe;
+    using ReturnType = typename std::result_of<F(Args...)>::type;
 
     template <typename F, typename ...Args>
     using FutureType = folly::SemiFuture<ReturnType<F, Args...>>;

@@ -1,6 +1,14 @@
 #include "GeneralThreadPool.h"
 #include "GeneralWorker.h"
 
+GeneralThreadPool::GeneralThreadPool() {
+}
+
+GeneralThreadPool::~GeneralThreadPool() {
+    stop();
+    wait();
+}
+
 bool GeneralThreadPool::start(size_t nrThreads, const std::string &name) {
     // this pool is in use
     if (m_nrThreads != 0) {
