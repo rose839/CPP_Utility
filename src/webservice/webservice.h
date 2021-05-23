@@ -10,6 +10,11 @@
 #include "../thread/NamedThread.h"
 #include "../base/Base.h"
 
+DECLARE_int32(ws_http_port);
+DECLARE_int32(ws_http2_port);
+DECLARE_string(ws_ip);
+DECLARE_int32(ws_threads);
+
 class WebService final {
 public:
     explicit WebService(const std::string name = "");
