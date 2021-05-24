@@ -1,3 +1,4 @@
+#include "../status.h"
 #include "WebService.h"
 
 DEFINE_int32(ws_http_port, 11000, "Port to listen on with http protocol");
@@ -21,3 +22,86 @@ public:
 private:
     const Router *m_router;
 };
+
+WebService::WebService(const std::string& name) {
+    m_router = std::make_unique<Router>(name, this);
+}
+
+WebService::~WebService() {
+    m_server->stop();
+    m_thread->join();
+}
+
+WebService::start() {
+    if (m_started) {
+        return Status::OK();
+    }
+
+    m_started = true;
+
+    std::vector<proxygen::HTTPServer::IPConfig> ips = {
+        {folly::SocketAddress(FLAGS_ws_ip, FLAGS_ws_http_port, true), proxygen::HTTPServer::Protocol::HTTP},
+        {folly::SocketAddress(FLAGS_ws_ip, FLAGS_ws_http2_port, true), proxygen::HTTPServer::Protocol::HTTP2},
+    };
+
+    proxygen::HTTPServerOptions options;
+    options.threads = static_cast<size_t>(FLAGS_ws_threads);
+    options.idleTimeout = std::chrono::milliseconds(60000);
+    options.enableContentCompression = false;
+    options.handlerFactories = 
+        proxygen::RequestHandlerChain().addThen<WebServiceHandlerFactory>(m_router.get()).build();
+    options.h2cEnabled = true;
+
+    m_server = std::make_unique<HTTPServer>(std::move(options));
+    m_server.bind(ips);
+
+    std::conditional_variable cv;
+    std::mutex mut;
+    auto status = Status::OK();
+    bool serverStartedDone = false;
+
+    m_thread = std::make_unique<NamedThread>(
+        "webservice-listener",
+        [&]() {
+            m_server->start(
+                [&]() {
+                    auto addresses = m_server->address();
+                    if (FLags_ws_http_port == 0) {
+                        FLags_ws_http_port = adddresses[0].address.getPort();
+                    }
+                    if (FLags_ws_http2_port == 0) {
+                        FLags_ws_http2_port = addresses[1].address.getPort();
+                    }
+                    {
+                        std::lock_guard<std::mutex> g(mut);
+                        serverStartedDone = true;
+                    }
+                    cv.notify_all();
+                },
+                [&] (std::exception_ptr eptr) {
+                    CHECK(eptr);
+                    try {
+                        std::rethrow_exception(eptr);
+                    } catch (const std::exception &e) {
+                        status = Status::Error("%s", e.what());
+                    }
+                    {
+                        std::lock_guard<std::mutex> g(mut);
+                        serverStartedDone = true;
+                    }
+                    cv.notify_all();
+                });
+        });
+
+    {
+        std::unique_lock<std::mutex> lck(mut);
+        cv.wait(lck, [&]() {
+            return serverStartedDone;
+        });
+
+        if (!status.ok()) {
+            return status;
+        }
+    }
+    return status;        
+}
