@@ -1,4 +1,5 @@
 #include "../status.h"
+#include "StatusHandler.h"
 #include "WebService.h"
 
 DEFINE_int32(ws_http_port, 11000, "Port to listen on with http protocol");
@@ -38,6 +39,13 @@ WebService::start() {
     }
 
     m_started = true;
+
+    router().get("/status").handler([](web::PathParams&& params) {
+        return new StatusHandler();
+    });
+    router().get("/").handler([](web::PathParams&& params) {
+        return new StatusHandler();
+    });
 
     std::vector<proxygen::HTTPServer::IPConfig> ips = {
         {folly::SocketAddress(FLAGS_ws_ip, FLAGS_ws_http_port, true), proxygen::HTTPServer::Protocol::HTTP},
