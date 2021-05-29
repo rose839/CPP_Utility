@@ -40,7 +40,7 @@ WebService::start() {
 
     m_started = true;
 
-    router().get("/status").handler([](web::PathParams&& params) {
+    router().get("/status").handler([](PathParams&& params) {
         return new StatusHandler();
     });
     router().get("/").handler([](web::PathParams&& params) {

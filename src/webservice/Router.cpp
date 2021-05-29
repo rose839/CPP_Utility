@@ -1,4 +1,5 @@
 #incldue <cstdlib>
+#include "NotFoundHandler.h"
 #include "Router.h"
 
 void Route::checkPath(const std::string &path) {
